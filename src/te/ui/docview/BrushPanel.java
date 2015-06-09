@@ -15,6 +15,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -146,15 +147,15 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 	}
 	
 	/** todo this is where to use spatial index structures */
-	Set<String> selectDocuments(Rectangle q) {
+	Set<String> selectDocuments(Rectangle2D.Double q) {
 		return corpus.select(xattr, yattr, q.getMinX(), q.getMaxX(), q.getMinY(), q.getMaxY()).docsById.keySet();
 	}
 	
 	public BrushPanel(DocSelectionListener qr, Corpus corpus) {
 		super();
-        setOpaque(true);
-        setBackground(Color.white);
-        setBorder(BorderFactory.createLineBorder(Color.black));
+		setOpaque(true);
+		setBackground(Color.white);
+		setBorder(BorderFactory.createLineBorder(Color.black));
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addComponentListener(new ResizerHandler());
@@ -262,7 +263,6 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 	
 	void pushDocsInBrushSelection() {
 		Set<String> docsel = selectDocuments(brush.getRegionUser());
-		System.out.println(docsel);
 		lastDocidSelectionByBrush = docsel;
 		docselFromBrushReceiver.receiveDocSelection(docsel);
 	}
@@ -523,12 +523,12 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 			int py2 = (int) y_u2p(Math.min(y1,y2)); // y-axis flip
 			return new Rectangle(px1,py1, px2-px1, py2-py1);
 		}
-		Rectangle getRegionUser() {
-			int px1 = (int) Math.min(x1,x2);
-			int py1 = (int) Math.max(y1,y2); // y-axis flip
-			int px2 = (int) Math.max(x1,x2);
-			int py2 = (int) Math.min(y1,y2); // y-axis flip
-			return new Rectangle(px1,py1, px2-px1, py2-py1);
+		Rectangle2D.Double getRegionUser() {
+			double px1 = Math.min(x1,x2);
+			double py1 = Math.max(y1,y2); // y-axis flip
+			double px2 = Math.max(x1,x2);
+			double py2 = Math.min(y1,y2); // y-axis flip
+			return new Rectangle2D.Double(px1,py1, px2-px1, py2-py1);
 		}
 
 		void storeCurrentPositionAsInitial() {
