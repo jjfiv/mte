@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.umass.cs.jfoley.coop.document.CoopDoc;
 import edu.umass.cs.jfoley.coop.document.DocVar;
 import edu.umass.cs.jfoley.coop.index.IndexBuilder;
+import edu.umass.cs.jfoley.coop.index.IndexReader;
 import edu.umass.cs.jfoley.coop.schema.CategoricalVarSchema;
 import edu.umass.cs.jfoley.coop.schema.DocVarSchema;
 import edu.umass.cs.jfoley.coop.schema.IndexConfiguration;
@@ -33,6 +34,9 @@ public class Corpus implements DataLayer {
 	double doclenSumSq = 0;
 	public boolean needsCovariateTypeConversion = false;
 	Directory indexDir;
+	IndexReader indexReader = null;
+
+	SummaryStats selectStats = new SummaryStats();
 
 	public Corpus() {
 		// for now, just make a hidden directory to store index files.
@@ -71,7 +75,13 @@ public class Corpus implements DataLayer {
 	
 	@Override
 	public DocSet select(String xAttr, String yAttr, double minX, double maxX, double minY, double maxY) {
-		return naiveSelect(xAttr, yAttr, minX, maxX, minY, maxY);
+		long t0 = System.nanoTime();
+		DocSet docs = naiveSelect(xAttr, yAttr, minX, maxX, minY, maxY);
+		selectStats.add(1e-6*(System.nanoTime()-t0));
+		if((selectStats.count() % 10) == 0) {
+			System.err.println("SELECT: "+selectStats);
+		}
+		return docs;
 	}
 	
 	@Override
@@ -264,7 +274,7 @@ public class Corpus implements DataLayer {
 			}
 		}
 
-
+		indexReader = new IndexReader(indexDir);
 	}
 
 	NLP.DocAnalyzer da = new NLP.UnigramAnalyzer();

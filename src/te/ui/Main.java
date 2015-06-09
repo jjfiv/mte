@@ -136,7 +136,9 @@ public class Main {
 		refreshDocdrivenTermList();
 	}
 
+	SummaryStats termRankingStats = new SummaryStats();
 	void refreshDocdrivenTermList() {
+		long t0 = System.nanoTime();
 		// two inputs.  1. docsel according to brush/doc panel.  2. freq thresh spinners.
 		DocSet curDS = AQ().curDocs();
 		docvarCompare = new TermvecComparison(curDS.terms, corpus.getGlobalTerms());
@@ -148,6 +150,10 @@ public class Main {
 		pinnedTermTable.updateCalculations();
 //		int effectiveTermcountThresh = (int) Math.floor(getTermProbThresh() * curDS.terms.totalCount);
 //		termcountInfo.setText(effectiveTermcountThresh==0 ? "all terms" : U.sf("count >= %d", effectiveTermcountThresh));
+		termRankingStats.add(1e-6*(System.nanoTime()-t0));
+		if((termRankingStats.count() % 10) == 0) {
+			System.err.println("TERM-RANKING: "+termRankingStats);
+		}
 	}
 
 	void runTermTermQuery(TermQuery tq) {
