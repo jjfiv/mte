@@ -1,7 +1,15 @@
 package te.data;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import ciir.jfoley.chai.io.Directory;
+import ciir.jfoley.chai.string.StrUtil;
 import com.fasterxml.jackson.databind.JsonNode;
+import edu.umass.cs.jfoley.coop.document.CoopDoc;
+import edu.umass.cs.jfoley.coop.document.DocVar;
+import edu.umass.cs.jfoley.coop.index.IndexBuilder;
+import edu.umass.cs.jfoley.coop.schema.CategoricalVarSchema;
+import edu.umass.cs.jfoley.coop.schema.DocVarSchema;
+import edu.umass.cs.jfoley.coop.schema.IndexConfiguration;
+import edu.umass.cs.jfoley.coop.schema.IntegerVarSchema;
 import te.data.Schema.ColumnInfo;
 import te.data.Schema.DataType;
 import te.ui.Configuration;
@@ -24,8 +32,11 @@ public class Corpus implements DataLayer {
 	public Map<String,SummaryStats> covariateSummaries;
 	double doclenSumSq = 0;
 	public boolean needsCovariateTypeConversion = false;
-	
+	Directory indexDir;
+
 	public Corpus() {
+		// for now, just make a hidden directory to store index files.
+		indexDir = new Directory(".index");
 		docsById = new HashMap<>();
 		index = new InvertedIndex();
 		docsInOriginalOrder = new ArrayList<>();
@@ -71,7 +82,7 @@ public class Corpus implements DataLayer {
 		}
 		U.pf("Tokenizer completed (%d ms)\n", (System.currentTimeMillis()-t0) );
 	}
-	public void loadNLP(String filename) throws JsonProcessingException, IOException {
+	public void loadNLP(String filename) throws IOException {
 		for (String line : BasicFileIO.openFileLines(filename)) {
 			String parts[] = line.split("\t");
 			String docid = parts[0];
@@ -80,6 +91,8 @@ public class Corpus implements DataLayer {
 			docsById.get(docid).loadFromNLP(jdoc);
 		}
 	}
+
+	/** Makes term occurrences boolean */
 	public void indicatorize() {
 		for (Document d : docsById.values()) {
 			TermVector newvec = new TermVector();
@@ -115,7 +128,10 @@ public class Corpus implements DataLayer {
 		}
 		U.p("Covariate summary stats: " + covariateSummaries);
 	}
-	
+
+	/**
+	 * This function at least collects categorical variable information and makes it canonical, picking an order and a numericalization.
+	 */
 	public void convertCovariateTypes() {
 		U.p("Covariate types, before conversion pass: " + getSchema().columnTypes);
 		for (Document d : allDocs()) {
@@ -127,7 +143,6 @@ public class Corpus implements DataLayer {
 				if (ci.dataType==DataType.CATEG && !ci.levels.name2level.containsKey(converted)) {
 					ci.levels.addLevel((String) converted);
 				}
-				
 			}
 		}
 		U.p("Covariate types, after conversion pass: " + getSchema().columnTypes);
@@ -175,6 +190,14 @@ public class Corpus implements DataLayer {
 		calculateCovariateSummaries();
 
 		U.pf("done analyzing covariates (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
+		t0=System.nanoTime(); U.p("Building index backend");
+		try {
+			buildDiskIndexBackend();
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+		U.pf("done building index backend (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
+
 		t0=System.nanoTime(); U.p("Analyzing document texts");
 
 		for (Document doc : allDocs()) {
@@ -186,6 +209,62 @@ public class Corpus implements DataLayer {
 		U.pf("done analyzing doc texts (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
 
 		finalizeIndexing();
+	}
+
+	private void buildDiskIndexBackend() throws IOException {
+		IndexConfiguration cfg = IndexConfiguration.create();
+		for (Map.Entry<String, ColumnInfo> kv : schema.columnTypes.entrySet()) {
+			String varName = kv.getKey();
+			ColumnInfo varInfo = kv.getValue();
+			switch(varInfo.dataType) {
+				case NUMBER:
+					cfg.documentVariables.put(varName, IntegerVarSchema.create(varName));
+					break;
+				case CATEG:
+					cfg.documentVariables.put(varName, new CategoricalVarSchema(varName, new ArrayList<>(varInfo.levels.name2level.keySet()), true));
+					break;
+				case BOOLEAN:
+					System.err.println("Skipping boolean variable "+varName+ " for now.");
+					break;
+			}
+		}
+
+		// HACK: clear out anything in the indexDir from before, while formats are changing this is a good idea to rebuild every time:
+		indexDir.removeRecursively();
+
+		try (IndexBuilder builder = new IndexBuilder(cfg, indexDir)) {
+			for (Document document : allDocs()) {
+				CoopDoc cdoc = new CoopDoc();
+
+				List<String> text = new ArrayList<>();
+				List<String> pos = new ArrayList<>();
+				List<String> ner = new ArrayList<>();
+				for (Token token : document.tokens) {
+					if(token.text != null) text.add(token.text);
+					if(token.pos != null) pos.add(token.pos);
+					if(token.ner != null) ner.add(token.ner);
+				}
+				if(!text.isEmpty()) cdoc.setTerms("tokens", text);
+				if(!pos.isEmpty()) cdoc.setTerms("pos", pos);
+				if(!ner.isEmpty()) cdoc.setTerms("ner", ner);
+				cdoc.setRawText(StrUtil.join(text, " "));
+
+				cdoc.setName(document.docid);
+				Map<String,DocVar> variables = new HashMap<>();
+				for (Map.Entry<String, Object> kv : document.covariates.entrySet()) {
+					DocVarSchema schemaByName = cfg.documentVariables.get(kv.getKey());
+					if(schemaByName == null) {
+						continue;
+					}
+					variables.put(kv.getKey(), schemaByName.createValue(kv.getValue()));
+				}
+				cdoc.setVariables(variables);
+
+				builder.addDocument(cdoc);
+			}
+		}
+
+
 	}
 
 	NLP.DocAnalyzer da = new NLP.UnigramAnalyzer();
