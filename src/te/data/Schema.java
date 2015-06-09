@@ -126,7 +126,7 @@ public class Schema {
 				if (ci.dataType == DataType.CATEG && 
 						(info.containsKey("values") || info.containsKey("levels"))) {
 					Object _values = info.containsKey("values") ? info.get("values") : 
-						info.containsKey("levels") ? info.get("levels") : null;
+						info.containsKey("levels") ? info.get("levels") : Collections.EMPTY_LIST;
 					List<String> values = (List<String>) _values;
 					for (String value : values) {
 						ci.levels.addLevel(value);

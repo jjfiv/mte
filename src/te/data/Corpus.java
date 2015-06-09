@@ -15,10 +15,7 @@ import java.util.function.Function;
 public class Corpus implements DataLayer {
 	private Map<String,Document> docsById;
 	public List<Document> docsInOriginalOrder;
-	/**
-	 * This is essentially the corpus statistics:
-	 */
-	public TermVector globalTerms;
+	private TermVector globalTerms;
 	private InvertedIndex index;
 //	SpatialIndex hierIndex;
 //	DoubleSummaryStatistics xSummary, ySummary;
@@ -100,7 +97,7 @@ public class Corpus implements DataLayer {
 		U.p("finalizing");
 		for (Document d : docsById.values()) {
 			index.add(d);
-			double n = d.termVec.totalCount;
+			double n = d.termVec.getTotalCount();
 			doclenSumSq += n*n;
 		}
 		DocSet allds = new DocSet( docsById.values() );
@@ -172,4 +169,10 @@ public class Corpus implements DataLayer {
 	}
 
 
+	/**
+	 * This is essentially the corpus statistics:
+	 */
+	public AbstractTermVector getGlobalTerms() {
+		return globalTerms;
+	}
 }

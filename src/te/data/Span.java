@@ -12,12 +12,12 @@ public class Span {
 	
 	@Override public String toString() { return String.format("Span[%d,%d)", start,end); }
 	@Override public boolean equals(Object o) {
-		if (!(o instanceof Span)) return false;
 		if (o==this) return true;
+		if (!(o instanceof Span)) return false;
 		return this.start==((Span)o).start && this.end==((Span) o).end;
 	}
 	@Override public int hashCode() {
-		return toString().hashCode();  // todo could make faster by hashing the ints together like in Pair
+		return Integer.hashCode(start) ^ Integer.hashCode(end);
 	}
 	public boolean contains(int i) {
 		return start <= i && i < end;

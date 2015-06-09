@@ -34,7 +34,7 @@ public class Analysis {
 				numtokQueryTermsTotal += numtokQueryTerms;
 				// n_du
 				for (String candTerm : doc.termVec.support()) {
-					if (corpus.globalTerms.value(candTerm) < mincount) continue;
+					if (corpus.getGlobalTerms().value(candTerm) < mincount) continue;
 					double numtokCandidate = doc.termVec.value(candTerm);
 					candInnerProducts.increment(candTerm, numtokQueryTerms * numtokCandidate);
 				}
@@ -45,7 +45,7 @@ public class Analysis {
 				String v = e.getKey();
 				double inner = e.getValue();
 				terms.add(v);
-				leftratios.add(inner / corpus.globalTerms.value(v));
+				leftratios.add(inner / corpus.getGlobalTerms().value(v));
 			}
 			List<Integer> inds = Arr.asList(Arr.rangeInts(terms.size()));
 			Collections.sort(inds, Comparator
@@ -60,7 +60,7 @@ public class Analysis {
 					if (++j>VIEW_TOTAL) break;
 					String w = terms.get(i);
 					U.pf("%5d: %25s %6s %6.0f %8.3f %8.3f %8.3f\n", j, w,
-							corpus.globalTerms.value(w),
+							corpus.getGlobalTerms().value(w),
 							candInnerProducts.value(w), leftratios.get(i),
 							leftratios.get(i)*jointoccurNormalizer(numtokQueryTermsTotal),
 							leftratios.get(i)*condoccurZ
@@ -72,7 +72,7 @@ public class Analysis {
 		
 		/** N^2 / (n_v sum_d n_d^2) */
 		double jointoccurNormalizer(double n_v) {
-			double Nsq = corpus.globalTerms.totalCount * corpus.globalTerms.totalCount;
+			double Nsq = corpus.getGlobalTerms().getTotalCount() * corpus.getGlobalTerms().getTotalCount();
 			return Nsq / (n_v * corpus.doclenSumSq);
 		}
 		/** N / (sum_d n_d n_dv) */
@@ -80,25 +80,25 @@ public class Analysis {
 			double sum = 0;
 			for (Document doc : queryDocSupp.docs()) {
 				double n_dv = doc.termVec.valueSum(queryTerms);
-				sum += doc.termVec.totalCount * n_dv;
+				sum += doc.termVec.getTotalCount() * n_dv;
 			}
-			return corpus.globalTerms.totalCount / sum;
+			return corpus.getGlobalTerms().getTotalCount() / sum;
 		}
 //		public double epmi(String candidateTerm) {
 //		}
 	}
 	/** can use this for term<->docset association */
 	public static class TermvecComparison {
-		public TermVector focus, background;
+		public AbstractTermVector focus, background;
 		
-		public TermvecComparison(TermVector focus, TermVector bg) {
+		public TermvecComparison(AbstractTermVector focus, AbstractTermVector bg) {
 			this.focus=focus;
 			this.background = bg;
 		}
 		
 		public double epmi(String term) {
-			double myprob = focus.value(term) / focus.totalCount;
-			double globalprob = background.value(term) / background.totalCount;
+			double myprob = focus.value(term) / focus.getTotalCount();
+			double globalprob = background.value(term) / background.getTotalCount();
 			return myprob / globalprob;
 //			double prob_lr = myprob * Math.log(myprob/globalprob);
 //			return prob_lr * 1e6;
@@ -109,7 +109,7 @@ public class Analysis {
 			final List<String> terms = new ArrayList<>();
 			final List<Double> epmis = new ArrayList<>();
 			for (String term : focus.support()) {
-				double myprob = focus.value(term) / focus.totalCount;
+				double myprob = focus.value(term) / focus.getTotalCount();
 				if (myprob < minprob) continue;
 				if (focus.value(term) < mincount) continue;
 

@@ -164,7 +164,7 @@ public class Main {
 	void refreshDocdrivenTermList() {
 		// two inputs.  1. docsel according to brush/doc panel.  2. freq thresh spinners.
 		DocSet curDS = AQ().curDocs();
-		docvarCompare = new TermvecComparison(curDS.terms, corpus.globalTerms);
+		docvarCompare = new TermvecComparison(curDS.terms, corpus.getGlobalTerms());
 		docdrivenTerms.clear();
 		docdrivenTerms.addAll( docvarCompare.topEpmi(getTermProbThresh(), getTermCountThresh()) );
 		docdrivenTermTable.model.fireTableDataChanged();
@@ -178,7 +178,7 @@ public class Main {
 	void runTermTermQuery(TermQuery tq) {
 		// bool-occur
 		TermVector focus = corpus.select(tq.terms).terms;
-		termtermBoolqueryCompare = new TermvecComparison(focus, corpus.globalTerms);
+		termtermBoolqueryCompare = new TermvecComparison(focus, corpus.getGlobalTerms());
 		termdrivenTerms = termtermBoolqueryCompare.topEpmi(getTermProbThresh(), getTermCountThresh());
 		termdrivenTermTable.model.fireTableDataChanged();
 		String queryterms = tq.terms.stream().collect(Collectors.joining(", "));
@@ -222,7 +222,7 @@ public class Main {
 		DocSet cd = AQ().curDocs();
 		String s = U.sf("Docvar selection: %s docs, %s wordtoks",
 				GUtil.commaize(cd.docs().size()),
-				GUtil.commaize((int) cd.terms.totalCount));
+				GUtil.commaize((int) cd.terms.getTotalCount()));
 		mainqueryInfo.setText(s);
 	}
 
