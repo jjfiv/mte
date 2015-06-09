@@ -1,27 +1,6 @@
 package te.ui.docview;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.*;
-import java.util.function.Consumer;
-
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JScrollPane;
-import javax.swing.ListCellRenderer;
-import javax.swing.ListModel;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-
 import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
-
 import te.data.DocSet;
 import te.data.Document;
 import te.ui.GUtil;
@@ -31,6 +10,20 @@ import te.ui.queries.DocSelectionChange;
 import te.ui.queries.FulldocChange;
 import te.ui.queries.TermQueryChange;
 import utility.util.U;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.Vector;
+import java.util.function.Consumer;
 
 // TODO implement pushes to the query receiver
 
@@ -43,7 +36,7 @@ public class DocList {
 	
 	public DocList(DocSelectionListener qr, List<Document> docsInOrderForDisplay) {
 		docselUpdateReceiver = qr;
-		Vector<Document> docOldVector = new Vector<Document>();
+		Vector<Document> docOldVector = new Vector<>();
 		for (Document d : docsInOrderForDisplay) docOldVector.add(d);
 		jlist = new JList<>(docOldVector);
 		jlist.setSelectionModel(new My_DefaultListSelectionModel());

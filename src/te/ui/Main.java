@@ -9,9 +9,6 @@ import com.google.common.eventbus.Subscribe;
 import edu.stanford.nlp.util.StringUtils;
 import te.data.Analysis.TermvecComparison;
 import te.data.*;
-import te.exceptions.BadConfig;
-import te.exceptions.BadData;
-import te.exceptions.BadSchema;
 import te.ui.docview.BrushPanel;
 import te.ui.docview.DocList;
 import te.ui.queries.*;
@@ -25,11 +22,8 @@ import javax.swing.JFormattedTextField.AbstractFormatterFactory;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 import java.util.function.Supplier;
@@ -73,8 +67,6 @@ public class Main {
 	public Corpus corpus = new Corpus();
 	EventBus eventBus = new EventBus();
 
-	String xattr, yattr;
-
 	public List<String> docdrivenTerms = new ArrayList<>();
 	public List<String> pinnedTerms = new ArrayList<>();
 	public List<String> termdrivenTerms = new ArrayList<>();
@@ -100,28 +92,9 @@ public class Main {
 
 	DocdrivenTermsDock docdrivenTermsDock;
 
-	NLP.DocAnalyzer da = new NLP.UnigramAnalyzer();
-	Supplier<Void> afteranalysisCallback = () -> null;
 	Supplier<Void> uiOverridesCallback = () -> null;
 
 	//////////////   controller type stuff    ////////////
-
-	/** only call this after schema is set. return false if fails. */
-	public boolean setXAttr(String xattrName) {
-		if ( ! corpus.getSchema().varnames().contains(xattrName)) {
-			return false;
-		}
-		xattr = xattrName;
-		return true;
-	}
-	/** only call this after schema is set. return false if fails. */
-	public boolean setYAttr(String yattrName) {
-		if ( ! corpus.getSchema().varnames().contains(yattrName)) {
-			return false;
-		}
-		yattr = yattrName;
-		return true;
-	}
 
 	double getTermProbThresh() {
 		return (double) tpSpinner.getValue();
@@ -394,9 +367,10 @@ public class Main {
 		brushPanel = new BrushPanel(this::pushUpdatedDocSelectionFromDocPanel, corpus.allDocs());
 		brushPanel.schema = corpus.getSchema();
 		// todo this is bad organization that the app owns the xattr/yattr selections and copies them to the brushpanel, right?
+		// note: jfoley, some work done on this, config object now owns current xattr/yattr selections. If they become UI state, they can move to AQ.
 		// i guess eventually we'll need a current-user-config object as the source of truth for this and brushpanel should be hooked up to pull from it?
-		if (xattr != null) brushPanel.xattr = xattr;
-		if (yattr != null) brushPanel.yattr = yattr;
+		if (config.xattr != null) brushPanel.xattr = config.xattr;
+		if (config.yattr != null) brushPanel.yattr = config.yattr;
 		brushPanel.setDefaultXYLim(corpus);
 		eventBus.register(brushPanel);
 
@@ -462,71 +436,17 @@ public class Main {
 		System.exit(1);
 	}
 
-	void finalizeCorpusAnalysisAfterConfiguration() {
-		long t0=System.nanoTime();
-		U.p("Analyzing covariates");
-
-		if (corpus.needsCovariateTypeConversion) {
-			corpus.convertCovariateTypes();
-		}
-		corpus.calculateCovariateSummaries();
-
-		U.pf("done analyzing covariates (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
-		t0=System.nanoTime(); U.p("Analyzing document texts");
-
-		for (Document doc : corpus.allDocs()) {
-			if (Thread.interrupted()) return;
-			NLP.analyzeDocument(da, doc);
-		}
-		afteranalysisCallback.get();
-
-		U.pf("done analyzing doc texts (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
-
-		corpus.finalizeIndexing();
-	}
 	static FileSystem FS = FileSystems.getDefault();
+	public Configuration config;
 
-	void initializeFromCommandlineArgs(String args[]) throws IOException, BadConfig, BadSchema, BadData {
-
-		boolean gotConfFile = false;
-		Configuration c = null;
-		DataLoader dataloader = new DataLoader();
-
-		for (String arg : args) {
-			Path p = FS.getPath(arg);
-//			U.pf("%s  isfile %s  isdir %s\n", arg, Files.isRegularFile(p), Files.isDirectory(p));
-			if (Files.isDirectory(p)) {
-				dataloader.loadTextFilesFromDirectory(arg);
-			} else if (Files.isRegularFile(p)) {
-				if (arg.matches(".*\\.(conf|config)$")) {
-					if (gotConfFile) {
-						assert false : "more than one configuration file specified";
-					}
-					U.pf("Processing as config file: %s\n", arg);
-					gotConfFile = true;
-					c = new Configuration();
-					c.initWithConfig(this, arg, dataloader);
-				} else if (arg.endsWith(".txt")) {
-					dataloader.loadTextFileAsDocumentText(arg);
-				}
-			} else {
-				U.p("WARNING: can't handle argument: " + arg);
-			}
-		}
-		corpus.setDataFromDataLoader(dataloader);
-		if (c==null) {
-			c = Configuration.defaultConfiguration(this);
-		}
-		c.doNLPBasedOnConfig();
-	}
 	public static void myMain(String[] args) throws Exception {
 		long t0=System.nanoTime();
 		final Main main = new Main();
 
 		if (args.length < 1) usage();
 
-		main.initializeFromCommandlineArgs(args);
-		main.finalizeCorpusAnalysisAfterConfiguration();
+		main.config = Configuration.initializeFromCommandlineArgs(main.corpus, args);
+		main.corpus.finalizeCorpusAnalysis(main.config);
 
 		SwingUtilities.invokeLater(() -> {
 			main.setupUI();

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import te.data.Schema.ColumnInfo;
 import te.data.Schema.DataType;
+import te.ui.Configuration;
 import utility.util.BasicFileIO;
 import utility.util.JsonUtil;
 import utility.util.U;
@@ -88,22 +89,6 @@ public class Corpus implements DataLayer {
 			d.termVec = newvec;
 		}
 	}
-	public void finalizeIndexing() {
-		long t0=System.nanoTime();
-//		hierIndex = new HierIndex(16, xSummary.getMin(), xSummary.getMax(), ySummary.getMin(), ySummary.getMax());
-//		hierSums.doSpatialSums(docsById.values());
-//		hierSums.dump();
-
-		U.p("finalizing");
-		for (Document d : docsById.values()) {
-			index.add(d);
-			double n = d.termVec.getTotalCount();
-			doclenSumSq += n*n;
-		}
-		DocSet allds = new DocSet( docsById.values() );
-		globalTerms = allds.terms;
-		U.pf("done finalizing (%.2f ms)\n", 1e-6*(System.nanoTime()-t0));
-	}
 
 	/** disjunction query */
 	@Override
@@ -174,5 +159,51 @@ public class Corpus implements DataLayer {
 	 */
 	public AbstractTermVector getGlobalTerms() {
 		return globalTerms;
+	}
+
+	public boolean attributeExists(String name) {
+		return schema.varnames().contains(name);
+	}
+
+	public void finalizeCorpusAnalysis(Configuration config) {
+		long t0=System.nanoTime();
+		U.p("Analyzing covariates");
+
+		if (needsCovariateTypeConversion) {
+			convertCovariateTypes();
+		}
+		calculateCovariateSummaries();
+
+		U.pf("done analyzing covariates (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
+		t0=System.nanoTime(); U.p("Analyzing document texts");
+
+		for (Document doc : allDocs()) {
+			if (Thread.interrupted()) return;
+			NLP.analyzeDocument(da, doc);
+		}
+		config.afteranalysisCallback.get();
+
+		U.pf("done analyzing doc texts (%.0f ms)\n", 1e-6*(System.nanoTime()-t0));
+
+		finalizeIndexing();
+	}
+
+	NLP.DocAnalyzer da = new NLP.UnigramAnalyzer();
+
+	private void finalizeIndexing() {
+		long t0=System.nanoTime();
+//		hierIndex = new HierIndex(16, xSummary.getMin(), xSummary.getMax(), ySummary.getMin(), ySummary.getMax());
+//		hierSums.doSpatialSums(docsById.values());
+//		hierSums.dump();
+
+		U.p("finalizing");
+		for (Document d : docsById.values()) {
+			index.add(d);
+			double n = d.termVec.getTotalCount();
+			doclenSumSq += n*n;
+		}
+		DocSet allds = new DocSet( docsById.values() );
+		globalTerms = allds.terms;
+		U.pf("done finalizing (%.2f ms)\n", 1e-6*(System.nanoTime()-t0));
 	}
 }
