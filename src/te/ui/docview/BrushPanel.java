@@ -25,7 +25,8 @@ import java.util.stream.Collectors;
  * it's either that, or a message approach.  the old system was a message approach, but that was starting to get messy.
  */
 public class BrushPanel extends JPanel implements MouseListener, MouseMotionListener {
-	
+
+	private final Corpus corpus;
 	public String xattr, yattr;  // allowed to be NULL.
 	public Schema schema;
 	
@@ -145,17 +146,11 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 	}
 	
 	/** todo this is where to use spatial index structures */
-	List<Integer> selectPoints(Rectangle q) {
-		List<Integer> ret = new ArrayList<>();
-		for (int i=0; i<points.size(); i++) {
-			if (q.contains(points.get(i).physPoint())) {
-				ret.add(i);
-			}
-		}
-		return ret;
+	Set<String> selectDocuments(Rectangle q) {
+		return corpus.select(xattr, yattr, q.getMinX(), q.getMaxX(), q.getMinY(), q.getMaxY()).docsById.keySet();
 	}
 	
-	public BrushPanel(DocSelectionListener qr, Collection<Document> docs) {
+	public BrushPanel(DocSelectionListener qr, Corpus corpus) {
 		super();
         setOpaque(true);
         setBackground(Color.white);
@@ -163,8 +158,9 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addComponentListener(new ResizerHandler());
+		this.corpus = corpus;
 		docselFromBrushReceiver = qr;
-		for (Document d : docs) {
+		for (Document d : corpus.allDocs()) {
 			MyPoint p = new MyPoint();
 			p.doc = d;
 			points.add(p);
@@ -265,10 +261,8 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 	}
 	
 	void pushDocsInBrushSelection() {
-		Set<String> docsel = new HashSet<>();
-		for (int i : selectPoints(brush.getRegionPhys())) {
-			docsel.add(points.get(i).doc.docid);
-		}
+		Set<String> docsel = selectDocuments(brush.getRegionUser());
+		System.out.println(docsel);
 		lastDocidSelectionByBrush = docsel;
 		docselFromBrushReceiver.receiveDocSelection(docsel);
 	}
@@ -290,24 +284,22 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 				.comparingInt((MyPoint p) -> p.isTermquery1Selected() ? 1:0)
 				.thenComparingInt((MyPoint p) -> p.isDocquerySelected() ? 1:0)
 		);
-		
-		for (int i=0; i<points.size(); i++) {
-			MyPoint mp = points.get(i);
+
+		for (MyPoint mp : points) {
 			Color c = mp.isTermquery1Selected() ? AllQueries.instance().termQueryColor :
-							mp.isDocquerySelected() ? BRUSH_COLOR : 
+					mp.isDocquerySelected() ? BRUSH_COLOR :
 							Color.gray;
 			g.setColor(c);
 			Point2D.Double p = mp.physPoint();
 			if (mp.isTermquery1Selected()) {
 				GUtil.drawCenteredTriangle(g, p.x, p.y, 3, mp.isTermquery1Selected());
-			}
-			else {
+			} else {
 				GUtil.drawCenteredCircle(g, p.x, p.y, 3, mp.isTermquery1Selected());
 				if (mp.isDocquerySelected() && !mp.isTermquery1Selected()) {
 					GUtil.drawCenteredCircle(g, p.x, p.y, 2, mp.isTermquery1Selected());
 				}
 			}
-			
+
 			g.setColor(Color.black);
 			if (mp.isFulldocSelected()) {
 				GUtil.drawCenteredCircle(g, p.x, p.y, 4, false);
@@ -531,7 +523,14 @@ public class BrushPanel extends JPanel implements MouseListener, MouseMotionList
 			int py2 = (int) y_u2p(Math.min(y1,y2)); // y-axis flip
 			return new Rectangle(px1,py1, px2-px1, py2-py1);
 		}
-		
+		Rectangle getRegionUser() {
+			int px1 = (int) Math.min(x1,x2);
+			int py1 = (int) Math.max(y1,y2); // y-axis flip
+			int px2 = (int) Math.max(x1,x2);
+			int py2 = (int) Math.min(y1,y2); // y-axis flip
+			return new Rectangle(px1,py1, px2-px1, py2-py1);
+		}
+
 		void storeCurrentPositionAsInitial() {
 			initx1=x1; initx2=x2; inity1=y1; inity2=y2; 
 		}

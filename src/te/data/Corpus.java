@@ -48,13 +48,13 @@ public class Corpus implements DataLayer {
 	
 	public DocSet naiveSelect(String xAttr, String yAttr, double minX, double maxX, double minY, double maxY) {
 		DocSet ds = new DocSet();
-		docsById.values().stream()
-			.filter(d -> 
-				getSchema().getDouble(d, xAttr) >= minX &&
-				getSchema().getDouble(d, xAttr) <= maxX &&
-				getSchema().getDouble(d, yAttr) >=minY &&
-				getSchema().getDouble(d, yAttr) <=maxY)
-			.forEach(d -> ds.add(d));
+		for (Document document : docsById.values()) {
+			double x = getSchema().getDouble(document, xAttr);
+			double y = getSchema().getDouble(document, yAttr);
+			if(x >= minX && x <= maxX && y <= minY && y >= maxY) {
+				ds.add(document);
+			}
+		}
 		return ds;
 	}
 	

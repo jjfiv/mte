@@ -66,6 +66,8 @@ import java.util.stream.IntStream;
 public class Main {
 	public Corpus corpus = new Corpus();
 	EventBus eventBus = new EventBus();
+	static FileSystem FS = FileSystems.getDefault();
+	public Configuration config;
 
 	public List<String> docdrivenTerms = new ArrayList<>();
 	public List<String> pinnedTerms = new ArrayList<>();
@@ -200,10 +202,10 @@ public class Main {
 	}
 
 	void pushUpdatedDocSelectionFromDocPanel(Collection<String> docids) {
-		Set<String> s = new HashSet<>(docids);
-		boolean same = AQ().docPanelSelectedDocIDs.equals(s);
+		Set<String> uniqueIds = new HashSet<>(docids);
+		boolean same = AQ().docPanelSelectedDocIDs.equals(uniqueIds);
 		if (!same) {
-			AQ().docPanelSelectedDocIDs = new HashSet<>(docids);
+			AQ().docPanelSelectedDocIDs = uniqueIds;
 			eventBus.post(new DocSelectionChange());
 		}
 	}
@@ -364,7 +366,7 @@ public class Main {
 		}
 		};
 
-		brushPanel = new BrushPanel(this::pushUpdatedDocSelectionFromDocPanel, corpus.allDocs());
+		brushPanel = new BrushPanel(this::pushUpdatedDocSelectionFromDocPanel, corpus);
 		brushPanel.schema = corpus.getSchema();
 		// todo this is bad organization that the app owns the xattr/yattr selections and copies them to the brushpanel, right?
 		// note: jfoley, some work done on this, config object now owns current xattr/yattr selections. If they become UI state, they can move to AQ.
@@ -435,9 +437,6 @@ public class Main {
 		System.out.println("Usage:  Launch ConfigFilename");
 		System.exit(1);
 	}
-
-	static FileSystem FS = FileSystems.getDefault();
-	public Configuration config;
 
 	public static void myMain(String[] args) throws Exception {
 		long t0=System.nanoTime();
