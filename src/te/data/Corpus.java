@@ -25,7 +25,7 @@ import java.util.function.Function;
 public class Corpus implements DataLayer {
 	private Map<String,Document> docsById;
 	public List<Document> docsInOriginalOrder;
-	private TermVector globalTerms;
+	private AbstractTermVector globalTerms;
 	private InvertedIndex index;
 //	SpatialIndex hierIndex;
 //	DoubleSummaryStatistics xSummary, ySummary;
@@ -105,7 +105,7 @@ public class Corpus implements DataLayer {
 	/** Makes term occurrences boolean */
 	public void indicatorize() {
 		for (Document d : docsById.values()) {
-			TermVector newvec = new TermVector();
+			AbstractTermVector newvec = new TroveTermVector();
 			for (String w : d.termVec.support()) {
 				newvec.increment(w);
 			}

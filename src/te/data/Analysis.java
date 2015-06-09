@@ -4,7 +4,6 @@ import utility.util.Arr;
 import utility.util.U;
 
 import java.util.*;
-import java.util.Map.Entry;
 
 public class Analysis {
 	static int VIEW_TOTAL = 20;
@@ -23,7 +22,7 @@ public class Analysis {
 			
 			// word_assoc.tex notation: 'u' are candidates, 'v' is query
 			// MAP:  u => (sum_d n_du n_dv)
-			TermVector candInnerProducts = new TermVector();
+			AbstractTermVector candInnerProducts = new TroveTermVector();
 			
 			// build up n_v
 			double numtokQueryTermsTotal = 0;
@@ -41,9 +40,8 @@ public class Analysis {
 			}
 			U.pf("co-occurring num terms: %s\n", candInnerProducts.support().size());
 			
-			for (Entry<String,Double> e : candInnerProducts.map.entrySet()) {
-				String v = e.getKey();
-				double inner = e.getValue();
+			for (String v : candInnerProducts.keySet()) {
+				double inner = candInnerProducts.value(v);
 				terms.add(v);
 				leftratios.add(inner / corpus.getGlobalTerms().value(v));
 			}

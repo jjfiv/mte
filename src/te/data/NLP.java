@@ -1,19 +1,17 @@
 package te.data;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import te.ui.GUtil;
-import utility.util.Arr;
-
 import com.google.common.collect.Lists;
-
-import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
+import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.util.CoreMap;
+import te.ui.GUtil;
+import utility.util.Arr;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class NLP {
 	static StanfordCoreNLP stPipeline() {
@@ -176,7 +174,7 @@ public class NLP {
 	
 	/** edits doc in-place, creating terminstances and termvectors.  assumes tokenization/nlp is complete. */
 	public static void analyzeDocument(DocAnalyzer analyzer, Document doc) {
-		doc.termVec = new TermVector();
+		doc.termVec = new TroveTermVector();
 		doc.tisByStartTokindex = new HashMap<>();
 		doc.tisByStartCharindex = new HashMap<>();
 		doc.tisByEndCharindex = new HashMap<>();

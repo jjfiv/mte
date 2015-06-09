@@ -158,7 +158,7 @@ public class Main {
 
 	void runTermTermQuery(TermQuery tq) {
 		// bool-occur
-		TermVector focus = corpus.select(tq.terms).terms;
+		AbstractTermVector focus = corpus.select(tq.terms).terms;
 		termtermBoolqueryCompare = new TermvecComparison(focus, corpus.getGlobalTerms());
 		termdrivenTerms = termtermBoolqueryCompare.topEpmi(getTermProbThresh(), getTermCountThresh());
 		termdrivenTermTable.model.fireTableDataChanged();

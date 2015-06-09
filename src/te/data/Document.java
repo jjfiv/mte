@@ -14,7 +14,7 @@ public class Document {
 	public Map<String,Object> covariates;
 	public String text;
 	public List<Token> tokens;
-	public TermVector termVec;
+	public AbstractTermVector termVec;
 	public Map<Integer, List<TermInstance>> tisByStartTokindex; // not filled in until preanalysis stage
 	public Map<Integer, List<TermInstance>> tisByAllTokindexes; // not filled in until preanalysis stage
 	public Map<Integer, List<TermInstance>> tisByStartCharindex; // not filled in until preanalysis stage

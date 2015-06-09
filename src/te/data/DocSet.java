@@ -5,7 +5,7 @@ import java.util.*;
 public class DocSet {
 //	public List<Document> docs;
 	public Map<String,Document> docsById;
-	public TermVector terms;
+	public AbstractTermVector terms;
 
 	public DocSet() {
 		init();
@@ -13,7 +13,7 @@ public class DocSet {
 	void init() {
 //		docs = new ArrayList<>();
 		docsById = new HashMap<>();
-		terms = new TermVector();
+		terms = new TroveTermVector();
 	}
 	public DocSet(Collection<Document> _docs) {
 		init();

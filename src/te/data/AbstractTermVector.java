@@ -14,7 +14,7 @@ public interface AbstractTermVector {
 
   void increment(String term);
 
-  void addInPlace(TermVector other);
+  void addInPlace(AbstractTermVector other);
 
   double value(String term);
 
@@ -23,4 +23,6 @@ public interface AbstractTermVector {
   AbstractTermVector copy();
 
   double getTotalCount();
+
+  Collection<String> keySet();
 }
