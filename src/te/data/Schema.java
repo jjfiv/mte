@@ -21,8 +21,8 @@ public class Schema {
 	public double getDouble(Document d, String attr) {
 		ColumnInfo ci = this.columnTypes.get(attr);
 		Object value = d.covariates.get(attr);
-		if (value instanceof Integer || value instanceof Double) {
-			return (Double) value;
+		if (value instanceof Number) { // covers Integer,Long,Double,Float
+			return ((Number) value).doubleValue();
 		}
 		if (value instanceof String && ci.dataType==DataType.CATEG) {
 			assert ci.levels.name2level.containsKey(value) : String.format("unknown level '%s', not in vocabulary for %s", value, attr);
@@ -143,32 +143,33 @@ public class Schema {
 	}
 	
 	public static class Levels {
-		public Map<Integer,Level> num2level = new HashMap<>();
-		public Map<String,Level> name2level = new HashMap<>();
+		public Map<Integer,CategoricalInfo> num2level = new HashMap<>();
+		public Map<String,CategoricalInfo> name2level = new HashMap<>();
 		
-		public Collection<Level> levels() {
+		public Collection<CategoricalInfo> levels() {
 			return num2level.values();
 		}
-		public static class Level {
-			public int number;
-			public String name;
-			public String longname;
-			
-			@Override
-			public String toString() {
-				return U.sf("Level(number=%d || name=%s || longname=%s)", number,name,longname);
-			}
-			public String displayName() {
-				return longname!=null ? longname : name;
-			}
-		}
-		public Level addLevel(String name) {
-			Level lev = new Level();
+		public CategoricalInfo addLevel(String name) {
+			CategoricalInfo lev = new CategoricalInfo();
 			lev.name = name;
 			lev.number = num2level.size();
 			num2level.put(lev.number,lev);
 			name2level.put(lev.name,lev);
 			return lev;
+		}
+	}
+
+	public static class CategoricalInfo {
+		public int number;
+		public String name;
+		public String longname;
+
+		@Override
+		public String toString() {
+			return U.sf("Level(number=%d || name=%s || longname=%s)", number,name,longname);
+		}
+		public String displayName() {
+			return longname!=null ? longname : name;
 		}
 	}
 
